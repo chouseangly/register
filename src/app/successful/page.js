@@ -12,7 +12,7 @@ const SuccessPage = () => {
         <p className="text-gray-200 mb-6">Thank you for registering. We look forward to seeing your creativity!</p>
 
         <button
-          onClick={() => router.push('/poster')}
+          onClick={() => router.push('/')}
           className="bg-cyan-300 hover:bg-cyan-400 text-black font-bold py-2 px-6 rounded-lg"
         >
           ⬅ Back to Poster
