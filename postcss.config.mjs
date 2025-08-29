@@ -1,10 +1,8 @@
-import nextConfig from './next.config.mjs';
-
 /** @type {import('postcss-load-config').Config} */
 const config = {
-   output: "standalone",
   plugins: {
     tailwindcss: {},
+    autoprefixer: {},
   },
 };
 
