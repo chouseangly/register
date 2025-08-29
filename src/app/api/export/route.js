@@ -1,19 +1,17 @@
-import fs from 'fs';
-import path from 'path';
+import { sql } from '@vercel/postgres';
 import * as XLSX from 'xlsx';
 
 export async function GET() {
   try {
-    const jsonPath = path.join(process.cwd(), 'public', 'data', 'registrations.json');
+    // Fetch data from the database
+    const { rows: jsonData } = await sql`SELECT * FROM registrations;`;
 
-    if (!fs.existsSync(jsonPath)) {
+    if (jsonData.length === 0) {
       return new Response(JSON.stringify({ error: 'No registration data found.' }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' },
       });
     }
-
-    const jsonData = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
 
     // Convert JSON to worksheet
     const worksheet = XLSX.utils.json_to_sheet(jsonData);

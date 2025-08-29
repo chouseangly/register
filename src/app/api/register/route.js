@@ -1,46 +1,36 @@
-import fs from 'fs';
-import path from 'path';
+import { sql } from '@vercel/postgres';
+import { put } from '@vercel/blob';
 
 export async function POST(request) {
   try {
     const formData = await request.formData();
-
     const name = formData.get('name');
     const email = formData.get('email');
     const phone = formData.get('phone');
-    const profile = formData.get('profile'); // File object
+    const profile = formData.get('profile');
 
-    // ✅ Save uploaded image to /public/uploads
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+    // Ensure the database table exists
+    await sql`
+      CREATE TABLE IF NOT EXISTS registrations (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        phone VARCHAR(50),
+        profile_image_url TEXT,
+        timestamp TIMESTAMPTZ DEFAULT NOW()
+      );
+    `;
 
-    const buffer = Buffer.from(await profile.arrayBuffer());
-    const fileName = `${Date.now()}-${profile.name}`;
-    const uploadPath = path.join(uploadDir, fileName);
-    fs.writeFileSync(uploadPath, buffer);
+    // Upload the profile picture to Vercel Blob
+    const { url: profileImageUrl } = await put(profile.name, profile, {
+      access: 'public',
+    });
 
-    // ✅ Save form data to JSON
-    const dataDir = path.join(process.cwd(), 'public', 'data');
-    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-
-    const jsonFile = path.join(dataDir, 'registrations.json');
-    let existingData = [];
-
-    if (fs.existsSync(jsonFile)) {
-      const fileContents = fs.readFileSync(jsonFile, 'utf-8');
-      existingData = JSON.parse(fileContents || '[]');
-    }
-
-    const newEntry = {
-      name,
-      email,
-      phone,
-      profileImage: `/uploads/${fileName}`, // for frontend display
-      timestamp: new Date().toISOString(),
-    };
-
-    existingData.push(newEntry);
-    fs.writeFileSync(jsonFile, JSON.stringify(existingData, null, 2));
+    // Save form data to the Postgres database
+    await sql`
+      INSERT INTO registrations (name, email, phone, profile_image_url)
+      VALUES (${name}, ${email}, ${phone}, ${profileImageUrl});
+    `;
 
     return new Response(JSON.stringify({ message: 'Registered successfully!' }), {
       status: 200,
